@@ -1,0 +1,107 @@
+# Welcome to Serverless!
+#
+# This file is the main config file for your service.
+# It's very minimal at this point and uses default values.
+# You can always add more config options for more control.
+# We've included some commented out config examples here.
+# Just uncomment any of them to get that config option.
+#
+# For full config options, check the docs:
+#    docs.serverless.com
+#
+# Happy Coding!
+
+service: certtest # NOTE: update this with your service name
+
+# You can pin your service to only deploy with a specific Serverless version
+# Check out our docs for more details
+# frameworkVersion: "=X.X.X"
+
+custom:
+  domain: a.mvayngrib.com
+  hostedZoneName: mvayngrib.com.
+  stage: dev
+
+provider:
+  name: aws
+  profile: mv
+  runtime: nodejs6.10
+  stage: ${self:custom.stage}
+  region: eu-west-1
+
+# you can add statements to the Lambda function's IAM Role here
+  # iamRoleStatements:
+    # - Sid: AllowCloudFrontUpdateDistribution
+    #   Effect: Allow
+    #   Action:
+    #     - cloudfront:updateDistribution
+    #   Resource: ["*"]
+    # - Effect: "Allow"
+    #   Action:
+    #     - "s3:ListBucket"
+    #   Resource: { "Fn::Join" : ["", ["arn:aws:s3:::", { "Ref" : "ServerlessDeploymentBucket" } ] ]  }
+    # - Effect: "Allow"
+    #   Action:
+    #     - "s3:ListBucket"
+    #   Resource: { "Fn::Join" : ["", ["arn:aws:s3:::", { "Ref" : "ServerlessDeploymentBucket" } ] ]  }
+    # - Effect: "Allow"
+    #   Action:
+    #     - "s3:PutObject"
+    #   Resource:
+    #     Fn::Join:
+    #       - ""
+    #       - - "arn:aws:s3:::"
+    #         - "Ref" : "ServerlessDeploymentBucket"
+    #         - "/*"
+
+# you can define service wide environment variables here
+#  environment:
+#    variable1: value1
+
+# you can add packaging information here
+#package:
+#  include:
+#    - include-me.js
+#    - include-me-dir/**
+#  exclude:
+#    - exclude-me.js
+#    - exclude-me-dir/**
+
+functions:
+  hello:
+    handler: handler.hello
+    events:
+      - http:
+          path: hello
+          method: get
+
+# you can add CloudFormation resource templates here
+resources:
+  Resources:
+    SSLCertificate:
+      Type: "AWS::CloudFormation::Stack"
+      Properties:
+        Parameters:
+          domain: ${self:custom.domain}
+          hostedZoneName: ${self:custom.hostedZoneName}    # your hosted domain
+        TemplateURL: "https://s3-eu-west-1.amazonaws.com/is24-infrastructure-public/cloudformation/verified-ssl-certificate/ssl-certificate.template.yaml"
+        # TemplateURL: "http://is24-infrastructure-public.s3.amazonaws.com/cloudformation/verified-ssl-certificate/ssl-certificate.template.yaml"
+        # TemplateURL: s3://is24-infrastructure-public/cloudformation/verified-ssl-certificate/ssl-certificate.template.yaml
+
+    DomainName:
+      Type: AWS::ApiGateway::DomainName
+      DependsOn: SSLCertificate
+      Properties:
+        CertificateArn:
+          GetAtt: SSLCertificate.Outputs.Arn
+        DomainName: ${self:custom.domain}
+
+    # BasePathMapping:
+    #   Type: AWS::ApiGateway::BasePathMapping
+    #   DependsOn: ApiGatewayRestApi
+    #   Properties:
+    #     BasePath: ${self:custom.stage}
+    #     DomainName: ${self:custom.domain}
+    #     RestApiId:
+    #       Ref: ApiGatewayRestApi
+    #     Stage: ${self:custom.stage}
